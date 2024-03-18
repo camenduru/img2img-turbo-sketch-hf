@@ -268,5 +268,5 @@ with gr.Blocks(css="style.css") as demo:
     image.change(run, inputs=inputs, outputs=outputs, queue=False, api_name=False)
 
 if __name__ == "__main__":
-    demo.queue().launch(debug=True, share=True)
+    demo.queue().launch(debug=True)
 
