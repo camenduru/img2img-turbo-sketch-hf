@@ -1,7 +1,3 @@
-"""
-3.43.1
-"""
-
 import os
 import sys
 import pdb
@@ -78,7 +74,8 @@ def run(image, prompt, prompt_template, style_name, seed, val_r):
     print("sketch updated")
     if image is None:
         ones = Image.new("L", (512, 512), 255)
-        return ones
+        temp_uri = pil_image_to_data_uri(ones)
+        return ones, gr.update(link=temp_uri), gr.update(link=temp_uri)
     prompt = prompt_template.replace("{prompt}", prompt)
     image = image.convert("RGB")
     image_t = TF.to_tensor(image) > 0.5
@@ -234,8 +231,8 @@ with gr.Blocks(css="style.css") as demo:
                 <div class="pad2"> <button href="TODO" download="image" id="my-button-down" onclick='return theSketchDownloadFunction()'></button> </div>
             </div>
             """)
-            gr.Markdown("## Prompt", elem_id="tools_header")
-            prompt = gr.Textbox(label=None, value="", show_label=False)
+            # gr.Markdown("## Prompt", elem_id="tools_header")
+            prompt = gr.Textbox(label="Prompt", value="", show_label=True)
             with gr.Row():
                 style = gr.Dropdown(label="Style", choices=STYLE_NAMES, value=DEFAULT_STYLE_NAME, scale=1)
                 prompt_temp = gr.Textbox(label="Prompt Style Template", value=styles[DEFAULT_STYLE_NAME], scale=2, max_lines=1)
@@ -269,4 +266,3 @@ with gr.Blocks(css="style.css") as demo:
 
 if __name__ == "__main__":
     demo.queue().launch(debug=True)
-

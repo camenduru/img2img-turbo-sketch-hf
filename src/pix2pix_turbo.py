@@ -1,4 +1,6 @@
-import os, requests
+import os
+import requests
+import sys
 import pdb
 import copy
 from tqdm import tqdm
@@ -7,11 +9,13 @@ from transformers import AutoTokenizer, PretrainedConfig, CLIPTextModel
 from diffusers import AutoencoderKL, UNet2DConditionModel, DDPMScheduler
 from diffusers.utils.peft_utils import set_weights_and_activate_adapters
 from peft import LoraConfig
-from .model import make_1step_sched
+p = "src/"
+sys.path.append(p)
+from model import make_1step_sched
 
 
+"""The forward method of the `Encoder` class."""
 def my_vae_encoder_fwd(self, sample):
-    r"""The forward method of the `Encoder` class."""
     sample = self.conv_in(sample)
     l_blocks = []
     # down
@@ -27,6 +31,7 @@ def my_vae_encoder_fwd(self, sample):
     return sample
 
 
+"""The forward method of the `Decoder` class."""
 def my_vae_decoder_fwd(self,sample, latent_embeds = None):
     sample = self.conv_in(sample)
     upscale_dtype = next(iter(self.up_blocks.parameters())).dtype
@@ -76,21 +81,10 @@ class Pix2Pix_Turbo(torch.nn.Module):
         vae = AutoencoderKL.from_pretrained("stabilityai/sd-turbo", subfolder="vae")
         unet = UNet2DConditionModel.from_pretrained("stabilityai/sd-turbo", subfolder="unet")
 
-        if name=="canny_to_image":
-            lora_rank = 8
-            P_UNET_SD="/home/gparmar/code/single_step_translation/output/paired/canny_canny_midjourney_512_512/sd21_turbo_direct_edge_withskip_opt_lora_8_proj/l2_lpips_gan_vagan_clip_224_patch_multilevel_sigmoid/lr_5e-5_l2_0.25_lpips_1_0.1_CLIPSIM_1.0/1node_8gpu_no_BS_1_GRAD_ACC_2/checkpoint-7501/unet_sd.pkl"
-            P_VAE_ENC_SD="/home/gparmar/code/single_step_translation/output/paired/canny_canny_midjourney_512_512/sd21_turbo_direct_edge_withskip_opt_lora_8_proj/l2_lpips_gan_vagan_clip_224_patch_multilevel_sigmoid/lr_5e-5_l2_0.25_lpips_1_0.1_CLIPSIM_1.0/1node_8gpu_no_BS_1_GRAD_ACC_2/checkpoint-7501/sd_vae_enc.pkl"
-            P_VAE_DEC_SD="/home/gparmar/code/single_step_translation/output/paired/canny_canny_midjourney_512_512/sd21_turbo_direct_edge_withskip_opt_lora_8_proj/l2_lpips_gan_vagan_clip_224_patch_multilevel_sigmoid/lr_5e-5_l2_0.25_lpips_1_0.1_CLIPSIM_1.0/1node_8gpu_no_BS_1_GRAD_ACC_2/checkpoint-7501/sd_vae_dec.pkl"
-            unet_lora_config = LoraConfig(r=lora_rank, init_lora_weights="gaussian", target_modules=[
-                "to_k", "to_q", "to_v", "to_out.0", "conv", "conv1", "conv2", "conv_shortcut", "conv_out",
-                "proj_in", "proj_out", "ff.net.2", "ff.net.0.proj"]
-            )
-
-        if name=="sketch_to_image_stochastic":
-            # download from url
-            url = "https://www.cs.cmu.edu/~clean-fid/tmp/img2img_turbo/ckpt/sketch_to_image_stochastic.pkl"
+        if name=="edge_to_image":
+            url = "https://www.cs.cmu.edu/~img2img-turbo/models/edge_to_image_loras.pkl"
             os.makedirs(ckpt_folder, exist_ok=True)
-            outf = os.path.join(ckpt_folder, "sketch_to_image_stochastic.pkl")
+            outf = os.path.join(ckpt_folder, "edge_to_image_loras.pkl")
             if not os.path.exists(outf):
                 print(f"Downloading checkpoint to {outf}")
                 response = requests.get(url, stream=True)
@@ -105,7 +99,29 @@ class Pix2Pix_Turbo(torch.nn.Module):
                 if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
                     print("ERROR, something went wrong")
                 print(f"Downloaded successfully to {outf}")
-            # p_ckpt = "/home/gparmar/code/img2img-turbo/single_step_translation/notebooks/DEMO/sketch_to_image_stochastic.pkl"
+            p_ckpt = outf
+            sd = torch.load(p_ckpt, map_location="cpu")
+            unet_lora_config = LoraConfig(r=sd["rank_unet"], init_lora_weights="gaussian", target_modules=sd["unet_lora_target_modules"])
+
+        if name=="sketch_to_image_stochastic":
+            # download from url
+            url = "https://www.cs.cmu.edu/~img2img-turbo/models/sketch_to_image_stochastic_lora.pkl"
+            os.makedirs(ckpt_folder, exist_ok=True)
+            outf = os.path.join(ckpt_folder, "sketch_to_image_stochastic_lora.pkl")
+            if not os.path.exists(outf):
+                print(f"Downloading checkpoint to {outf}")
+                response = requests.get(url, stream=True)
+                total_size_in_bytes= int(response.headers.get('content-length', 0))
+                block_size = 1024  # 1 Kibibyte
+                progress_bar = tqdm(total=total_size_in_bytes, unit='iB', unit_scale=True)
+                with open(outf, 'wb') as file:
+                    for data in response.iter_content(block_size):
+                        progress_bar.update(len(data))
+                        file.write(data)
+                progress_bar.close()
+                if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
+                    print("ERROR, something went wrong")
+                print(f"Downloaded successfully to {outf}")
             p_ckpt = outf
             sd = torch.load(p_ckpt, map_location="cpu")
             unet_lora_config = LoraConfig(r=sd["rank_unet"], init_lora_weights="gaussian", target_modules=sd["unet_lora_target_modules"])
@@ -123,15 +139,17 @@ class Pix2Pix_Turbo(torch.nn.Module):
         vae.decoder.ignore_skip = False
         vae.add_adapter(vae_lora_config, adapter_name="vae_skip")
         unet.add_adapter(unet_lora_config)
-        unet.load_state_dict(sd["state_dict_unet"])
+        _sd_unet = unet.state_dict()
+        for k in sd["state_dict_unet"]: _sd_unet[k] = sd["state_dict_unet"][k]
+        unet.load_state_dict(_sd_unet)
         unet.enable_xformers_memory_efficient_attention()
-
-        vae.load_state_dict(sd["state_dict_vae"])
+        _sd_vae = vae.state_dict()
+        for k in sd["state_dict_vae"]: _sd_vae[k] = sd["state_dict_vae"][k]
+        vae.load_state_dict(_sd_vae)
         unet.to("cuda")
         vae.to("cuda")
         unet.eval()
         vae.eval()
-        
         self.unet, self.vae = unet, vae
         self.timesteps = torch.tensor([999], device="cuda").long()
 
@@ -141,7 +159,6 @@ class Pix2Pix_Turbo(torch.nn.Module):
         caption_tokens = self.tokenizer(prompt, max_length=self.tokenizer.model_max_length,
                 padding="max_length", truncation=True, return_tensors="pt").input_ids.cuda()
         caption_enc = self.text_encoder(caption_tokens)[0]
-
         if deterministic:
             encoded_control = self.vae.encode(c_t).latent_dist.sample()*self.vae.config.scaling_factor
             model_pred = self.unet(encoded_control, self.timesteps, encoder_hidden_states=caption_enc,).sample
@@ -161,8 +178,4 @@ class Pix2Pix_Turbo(torch.nn.Module):
             x_denoised = self.sched.step(unet_output, self.timesteps, unet_input, return_dict=True).prev_sample
             self.vae.decoder.incoming_skip_acts = self.vae.encoder.current_down_blocks
             output_image = (self.vae.decode(x_denoised / self.vae.config.scaling_factor ).sample).clamp(-1,1)
-
         return output_image
-
-
-
