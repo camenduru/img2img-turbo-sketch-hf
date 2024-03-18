@@ -27,3 +27,4 @@ peft
 dominate
 diffusers==0.25.1
 gradio==3.43.1
+hf_transfer
