@@ -254,6 +254,13 @@ with gr.Blocks(css="style.css") as demo:
             gr.Markdown("## OUTPUT", elem_id="output_header")
             result = gr.Image(label="Result", height=440, width=440, elem_id="output_image", show_label=False, show_download_button=True)
             download_output = gr.Button("Download output", elem_id="download_output")
+            gr.Markdown("### Instructions")
+            gr.Markdown("**1**. Enter a text prompt.")
+            gr.Markdown("**2**. Sketch the image you want to draw")
+            gr.Markdown("**3**. Select the style of the image with the Prompt Style Template")
+            gr.Markdown("**4**. Adjust the Sketch guidance gamma to control the influence of the sketch on the final image")
+            gr.Markdown("**5**. Try different seeds to get different results")
+
     
     eraser.change(fn=lambda x: gr.update(value=not x), inputs=[eraser], outputs=[line], queue=False, api_name=False).then(update_canvas, [line, eraser], [image])
     line.change(fn=lambda x: gr.update(value=not x), inputs=[line], outputs=[eraser], queue=False, api_name=False).then(update_canvas, [line, eraser], [image])
