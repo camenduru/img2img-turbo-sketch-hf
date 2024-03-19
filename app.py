@@ -74,7 +74,7 @@ def pil_image_to_data_uri(img, format='PNG'):
 
 
 def run(image, prompt, prompt_template, style_name, seed, val_r):
-    print(f"prompt: {prompt}")
+    print(f"seed: {seed}, r_val: {val_r}")
     print("sketch updated")
     if image is None:
         ones = Image.new("L", (512, 512), 255)
