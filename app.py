@@ -262,19 +262,19 @@ with gr.Blocks(css="style.css") as demo:
             gr.Markdown("**5**. Try different seeds to get different results")
 
     
-    eraser.change(fn=lambda x: gr.update(value=not x), inputs=[eraser], outputs=[line], queue=False, api_name=False).then(update_canvas, [line, eraser], [image])
-    line.change(fn=lambda x: gr.update(value=not x), inputs=[line], outputs=[eraser], queue=False, api_name=False).then(update_canvas, [line, eraser], [image])
+    eraser.change(fn=lambda x: gr.update(value=not x), inputs=[eraser], outputs=[line]).then(update_canvas, [line, eraser], [image])
+    line.change(fn=lambda x: gr.update(value=not x), inputs=[line], outputs=[eraser]).then(update_canvas, [line, eraser], [image])
 
     demo.load(None,None,None,_js=scripts)
-    randomize_seed.click(lambda x: random.randint(0, MAX_SEED), inputs=[], outputs=seed, queue=False, api_name=False)
+    randomize_seed.click(lambda x: random.randint(0, MAX_SEED), inputs=[], outputs=seed)
     inputs = [image, prompt, prompt_temp, style, seed, val_r]
     outputs = [result, download_sketch, download_output]
-    prompt.submit(fn=run, inputs=inputs, outputs=outputs, api_name=False)
-    style.change(lambda x: styles[x], inputs=[style], outputs=[prompt_temp], queue=False, api_name=False).then(
-        fn=run, inputs=inputs, outputs=outputs, api_name=False,)
-    val_r.change(run, inputs=inputs, outputs=outputs, queue=False, api_name=False)
-    run_button.click(fn=run, inputs=inputs, outputs=outputs, api_name=False )
-    image.change(run, inputs=inputs, outputs=outputs, queue=False, api_name=False)
+    prompt.submit(fn=run, inputs=inputs, outputs=outputs)
+    style.change(lambda x: styles[x], inputs=[style], outputs=[prompt_temp]).then(
+        fn=run, inputs=inputs, outputs=outputs,)
+    val_r.change(run, inputs=inputs, outputs=outputs)
+    run_button.click(fn=run, inputs=inputs, outputs=outputs)
+    image.change(run, inputs=inputs, outputs=outputs,)
 
 if __name__ == "__main__":
     demo.queue().launch(debug=True)
