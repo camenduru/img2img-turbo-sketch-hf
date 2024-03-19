@@ -19,6 +19,10 @@ model = Pix2Pix_Turbo("sketch_to_image_stochastic")
 
 style_list = [
     {
+        "name": "No Style",
+        "prompt": "{prompt}",
+    },
+    {
         "name": "Cinematic",
         "prompt": "cinematic still {prompt} . emotional, harmonious, vignette, highly detailed, high budget, bokeh, cinemascope, moody, epic, gorgeous, film grain, grainy",
     },
@@ -255,11 +259,11 @@ with gr.Blocks(css="style.css") as demo:
             result = gr.Image(label="Result", height=440, width=440, elem_id="output_image", show_label=False, show_download_button=True)
             download_output = gr.Button("Download output", elem_id="download_output")
             gr.Markdown("### Instructions")
-            gr.Markdown("**1**. Enter a text prompt.")
-            gr.Markdown("**2**. Sketch the image you want to draw")
-            gr.Markdown("**3**. Select the style of the image with the Prompt Style Template")
-            gr.Markdown("**4**. Adjust the Sketch guidance gamma to control the influence of the sketch on the final image")
-            gr.Markdown("**5**. Try different seeds to get different results")
+            gr.Markdown("**1**. Enter a text prompt (e.g. cat)")
+            gr.Markdown("**2**. Start sketching")
+            gr.Markdown("**3**. Change the image style using a style template")
+            gr.Markdown("**4**. Adjust the effect of sketch guidance using the slider")
+            gr.Markdown("**5**. Try different seeds to generate different results")
 
     
     eraser.change(fn=lambda x: gr.update(value=not x), inputs=[eraser], outputs=[line]).then(update_canvas, [line, eraser], [image])
