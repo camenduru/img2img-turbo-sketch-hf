@@ -238,7 +238,7 @@ with gr.Blocks(css="style.css") as demo:
                 prompt_temp = gr.Textbox(label="Prompt Style Template", value=styles[DEFAULT_STYLE_NAME], scale=2, max_lines=1)
             
             with gr.Row():
-                val_r = gr.Slider(label="sketch guidance r: ", show_label=True, minimum=0, maximum=1, value=0.4, step=0.01, scale=3)
+                val_r = gr.Slider(label="Sketch guidance gamma: ", show_label=True, minimum=0, maximum=1, value=0.4, step=0.01, scale=3)
                 seed = gr.Textbox(label="Seed", value=42, scale=1, min_width=50)
                 randomize_seed = gr.Button("Random", scale=1, min_width=50)
 

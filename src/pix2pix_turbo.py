@@ -11,52 +11,7 @@ from diffusers.utils.peft_utils import set_weights_and_activate_adapters
 from peft import LoraConfig
 p = "src/"
 sys.path.append(p)
-from model import make_1step_sched
-
-
-"""The forward method of the `Encoder` class."""
-def my_vae_encoder_fwd(self, sample):
-    sample = self.conv_in(sample)
-    l_blocks = []
-    # down
-    for down_block in self.down_blocks:
-        l_blocks.append(sample)
-        sample = down_block(sample)
-    # middle
-    sample = self.mid_block(sample)
-    sample = self.conv_norm_out(sample)
-    sample = self.conv_act(sample)
-    sample = self.conv_out(sample)
-    self.current_down_blocks = l_blocks
-    return sample
-
-
-"""The forward method of the `Decoder` class."""
-def my_vae_decoder_fwd(self,sample, latent_embeds = None):
-    sample = self.conv_in(sample)
-    upscale_dtype = next(iter(self.up_blocks.parameters())).dtype
-    # middle
-    sample = self.mid_block(sample, latent_embeds)
-    sample = sample.to(upscale_dtype)
-    if not self.ignore_skip:
-        skip_convs = [self.skip_conv_1, self.skip_conv_2, self.skip_conv_3, self.skip_conv_4]
-        # up
-        for idx, up_block in enumerate(self.up_blocks):
-            skip_in = skip_convs[idx](self.incoming_skip_acts[::-1][idx])
-            # add skip
-            sample = sample + skip_in
-            sample = up_block(sample, latent_embeds)
-    else:
-        for idx, up_block in enumerate(self.up_blocks):
-            sample = up_block(sample, latent_embeds)
-    # post-process
-    if latent_embeds is None:
-        sample = self.conv_norm_out(sample)
-    else:
-        sample = self.conv_norm_out(sample, latent_embeds)
-    sample = self.conv_act(sample)
-    sample = self.conv_out(sample)
-    return sample
+from model import make_1step_sched, my_vae_encoder_fwd, my_vae_decoder_fwd
 
 
 class TwinConv(torch.nn.Module):
@@ -151,6 +106,7 @@ class Pix2Pix_Turbo(torch.nn.Module):
         unet.eval()
         vae.eval()
         self.unet, self.vae = unet, vae
+        self.vae.decoder.gamma = 1
         self.timesteps = torch.tensor([999], device="cuda").long()
 
 
@@ -177,5 +133,6 @@ class Pix2Pix_Turbo(torch.nn.Module):
             self.unet.conv_in.r = None
             x_denoised = self.sched.step(unet_output, self.timesteps, unet_input, return_dict=True).prev_sample
             self.vae.decoder.incoming_skip_acts = self.vae.encoder.current_down_blocks
+            self.vae.decoder.gamma = r
             output_image = (self.vae.decode(x_denoised / self.vae.config.scaling_factor ).sample).clamp(-1,1)
         return output_image
