@@ -120,6 +120,9 @@ async () => {
         document.body.appendChild(link); // Required for Firefox
         link.click();
         document.body.removeChild(link); // Clean up
+      
+        // also call the output download function
+        theOutputDownloadFunction();
       return false
     }
 
